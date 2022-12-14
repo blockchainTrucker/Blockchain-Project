@@ -1,0 +1,22 @@
+{
+	"name": "blockchain-project",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jwachtel96/Blockchain-Project.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/jwachtel96/Blockchain-Project/issues"
+	},
+	"dependencies": {
+		"crypto": "^1.0.1",
+		"elliptic": "^6.5.4"
+	}
+}
