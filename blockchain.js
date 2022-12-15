@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { threadId } = require('worker_threads');
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 
@@ -90,12 +91,26 @@ class Blockchain {
 		this.chain = [this.createGenesisBlock()];
 		this.difficulty = 5;
 		this.pendingTransactions = [];
+		this.confirmedTransactions = 0;
 		this.miningReward = 5000000;
 	}
 
 	createGenesisBlock() {
-		return new Block(Date.parse('2022-12-17'), [], '0');
+		return new Block(Date.parse('2022-12-14'), [], '0');
 	}
+
+	getInfo() {
+		return {
+			about: 'Funding Chain Coin',
+			peers: null,
+			difficulty: this.difficulty,
+			length: this.chain.length,
+			confirmedTransactions: this.confirmedTransactions,
+			pendingTransactions: this.pendingTransactions.length,
+		};
+	}
+
+	debug() {}
 
 	getLatestBlock() {
 		return this.chain[this.chain.length - 1];
@@ -118,7 +133,8 @@ class Blockchain {
 
 		console.log('Block successfully mined!');
 		this.chain.push(block);
-
+		this.confirmedTransactions = this.confirmedTransactions +=
+			this.pendingTransactions.length;
 		this.pendingTransactions = [];
 	}
 
