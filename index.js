@@ -4,25 +4,36 @@ const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 const crypto = require('crypto');
 const PORT = 5555;
+const nodeID = `http://localhost:${PORT}`;
 const { Blockchain, Transaction } = require('./blockchain');
+const validator = require('validator');
 
-const fccoin = new Blockchain();
-
-const nodeID = crypto
-	.createHash('sha256')
-	.update(Date.now().toString(), 'Funding Chain Coin')
-	.digest('hex');
+const coin = new Blockchain();
 
 app.get('/info', (req, res) => {
-	let info = fccoin.getInfo();
+	let info = coin.getInfo();
 	info.nodeID = nodeID;
 	res.send(JSON.stringify(info));
 });
 
 app.get('/debug', (req, res) => {
-	let info = fccoin.debug();
-	info.selfURL = 'http://localhost:5555';
+	let info = coin.debug();
+	info.selfURL = `http://localhost:${PORT}`;
 	res.send(JSON.stringify(info));
+});
+
+app.get('/reset-chain', (req, res) => {
+	coin.reset();
+	res.send(
+		JSON.stringify({
+			message: "The chain was reset to it's genesis block",
+		})
+	);
+});
+
+app.post('/transaction', (req, res) => {
+	const transaction = req.body;
+	res.send(JSON.stringify(coin.addTransaction(transaction)));
 });
 
 app.listen(PORT, () => {
