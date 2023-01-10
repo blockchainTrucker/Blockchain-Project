@@ -8,6 +8,7 @@ class Transaction {
 		this.toAddress = toAddress;
 		this.value = value;
 		this.timestamp = Date.now();
+		this.hash = this.calculateHash().toString();
 	}
 	calculateHash() {
 		return crypto
@@ -18,15 +19,11 @@ class Transaction {
 			.digest('hex');
 	}
 
-	signTransaction(signingKey) {
-		if (signingKey.getPublic('hex') !== this.fromAddress) {
-			throw new Error('You cannot sign transactions for other wallets!');
-		}
-
-		this.hash = this.calculateHash().toString();
-		const sig = signingKey.sign(this.hash, 'base64');
-
+	signTransaction(privateKey) {
+		const key = ec.keyFromPrivate(privateKey, 'hex');
+		const sig = key.sign(this.hash, 'base64');
 		this.signature = sig.toDER('hex');
+		return this;
 	}
 
 	isValid() {
@@ -48,7 +45,8 @@ class Block {
 		previousHash,
 		nonce,
 		difficulty,
-		miner
+		miner,
+		index
 	) {
 		this.previousHash = previousHash;
 		this.timestamp = timestamp;
@@ -57,6 +55,7 @@ class Block {
 		this.difficulty = difficulty;
 		this.miner = miner;
 		this.hash = this.calculateHash();
+		this.index = index;
 	}
 
 	calculateHash() {
@@ -102,24 +101,62 @@ class Blockchain {
 		this.confirmedTransactions = 0;
 		this.miningReward = 5000000;
 		this.fee = 100;
+		this.peers = [];
+	}
+
+	addTransaction(transaction) {
+		if (!transaction.fromAddress || !transaction.toAddress) {
+			throw new Error('Transaction must include from and to address');
+		}
+
+		if (!transaction.isValid()) {
+			throw new Error('Cannot add invalid transaction to chain');
+		}
+
+		if (transaction.value <= 0) {
+			throw new Error('Transaction amount should be higher than 0');
+		}
+
+		const walletBalance = this.getBalanceOfAddress(transaction.fromAddress);
+		if (walletBalance < transaction.amount + this.fee) {
+			throw new Error('Not enough balance');
+		}
+
+		const pendingTxForWallet = this.pendingTransactions.filter(
+			(tx) => tx.fromAddress === transaction.fromAddress
+		);
+
+		if (pendingTxForWallet.length > 0) {
+			const totalPendingAmount = pendingTxForWallet
+				.map((tx) => tx.amount)
+				.reduce((prev, curr) => prev + curr);
+
+			const totalAmount = totalPendingAmount + transaction.value;
+			if (totalAmount > walletBalance) {
+				throw new Error(
+					'Pending transactions for this wallet is higher than its balance.'
+				);
+			}
+		}
+
+		this.pendingTransactions.push(transaction);
+		return transaction;
 	}
 
 	createGenesisBlock() {
-		return new Block(
-			Date.now(),
-			[],
-			'0',
-			'0',
-			this.difficulty,
-			'N/A',
-			'genesis'
+		const faucetTx = new Transaction(
+			'',
+			'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713',
+			1000000000000000 * 10000
 		);
+
+		return new Block(Date.now(), [faucetTx], '0', 0, 0, 'N/A', 'genesis');
 	}
 
 	getInfo() {
 		return {
 			about: 'Funding Chain Coin',
-			peers: null,
+			peers: this.peers,
 			difficulty: this.difficulty,
 			length: this.chain.length,
 			confirmedTransactions: this.confirmedTransactions,
@@ -128,7 +165,10 @@ class Blockchain {
 	}
 
 	debug() {
-		return { chain: this.chain };
+		return {
+			chain: this.chain,
+			pendingTransactions: this.pendingTransactions,
+		};
 	}
 
 	reset() {
@@ -164,73 +204,27 @@ class Blockchain {
 	// 	this.pendingTransactions = [];
 	// }
 
-	addTransaction(transaction) {
-		if (!transaction.value || !transaction.toAddress) {
-			throw new Error('Transaction must include from and to address');
-		}
-
-		if (!transaction.isValid()) {
-			throw new Error('Cannot add invalid transaction to chain');
-		}
-
-		if (transaction.value <= 0) {
-			throw new Error('Transaction amount should be higher than 0');
-		}
-
-		const walletBalance = this.getBalanceOfAddress(transaction.fromAddress);
-		if (walletBalance < transaction.amount + this.fee) {
-			throw new Error('Not enough balance');
-		}
-
-		const pendingTxForWallet = this.pendingTransactions.filter(
-			(tx) => tx.fromAddress === transaction.fromAddress
-		);
-
-		if (pendingTxForWallet.length > 0) {
-			const totalPendingAmount = pendingTxForWallet
-				.map((tx) => tx.amount)
-				.reduce((prev, curr) => prev + curr);
-
-			const totalAmount = totalPendingAmount + transaction.value;
-			if (totalAmount > walletBalance) {
-				throw new Error(
-					'Pending transactions for this wallet is higher than its balance.'
-				);
-			}
-		}
-
-		this.pendingTransactions.push(transaction);
-		console.log('transaction added: ', transaction);
-		return transaction;
-	}
-
 	getBalanceOfAddress(address) {
 		let balance = 0;
-
 		for (const block of this.chain) {
 			for (const trans of block.transactions) {
 				if (trans.fromAddress === address) {
-					balance -= trans.amount;
+					balance -= trans.value;
 				}
-
 				if (trans.toAddress === address) {
-					balance += trans.amount;
+					balance += trans.value;
 				}
 			}
 		}
 		return balance;
 	}
 
-	createTransaction(transaction) {
-		if (!transaction.fromAddress || !transaction.toAddress) {
-			throw new Error('Transaction must include from and to address');
-		}
-
-		if (!transaction.isValid()) {
-			throw new Error('Cannot add invalid transaction to chain');
-		}
-
-		this.pendingTransactions.push(transaction);
+	faucet(faucetAddress, toAddress, privateKey) {
+		const value = 100000000;
+		const tx = new Transaction(faucetAddress, toAddress, value);
+		const signedTx = tx.signTransaction(privateKey);
+		this.addTransaction(signedTx);
+		return `sent 1 coin to ${toAddress}`;
 	}
 
 	getAllTransactionsForWallet(address) {
@@ -243,8 +237,6 @@ class Blockchain {
 				}
 			}
 		}
-
-		console.log('get transactions for wallet count: %s', txs.length);
 		return txs;
 	}
 
