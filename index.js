@@ -9,7 +9,7 @@ const nodeID = `http://localhost:${PORT}`;
 const { Blockchain, Transaction } = require('./blockchain');
 const axios = require('axios');
 
-const node = (() => {
+const node = (async () => {
 	const faucetPrivateKey =
 		'1d9f52460c220ef032f0e510082c21b01c8059a503080afc5ffd1aad48efc6d8';
 	const faucetPublicKey =
@@ -30,6 +30,8 @@ const node = (() => {
 
 	app.get('/debug', (req, res) => {
 		let info = coin.debug();
+		info.miners = miners;
+		info.peers = peers;
 		info.selfURL = `http://localhost:${PORT}`;
 		res.send(JSON.stringify(info));
 	});
@@ -41,6 +43,10 @@ const node = (() => {
 				message: "The chain was reset to it's genesis block",
 			})
 		);
+	});
+
+	app.get('/chain', (req, res) => {
+		res.send(JSON.stringify(coin.chain));
 	});
 
 	app.post('/transaction', (req, res) => {
@@ -64,14 +70,30 @@ const node = (() => {
 	});
 
 	app.post('/connect-miner', (req, res) => {
-		console.log(req.body);
+		const id = req.body.id;
+		let count = 0;
+		for (const miner of miners) {
+			if (miner === id) {
+				count++;
+			}
+		}
+		if (count === 0) {
+			miners.push(id);
+		}
 		res.send(
 			JSON.stringify({
 				previousBlockHash: coin.getLatestBlock().hash,
 				difficulty: coin.difficulty,
 				pendingTransactions: coin.pendingTransactions,
+				timestamp: Date.now(),
 			})
 		);
+	});
+
+	app.post('/submit-new-block', (req, res) => {
+		let block = req.body;
+		coin.submitBlock(block);
+		res.send(JSON.stringify(req.body.hash));
 	});
 
 	app.listen(PORT, () => {
@@ -83,16 +105,65 @@ const miner = (async () => {
 	const PORT = 6000;
 	const minerID = `http://localhost:${PORT}`;
 	const publicKey =
-		'04016bb09f05461bb1da9f1891542e3f8eb05aa5babbd97ad8d97cb23b067c8db425e6d1740b87648ef117f2b8b7348f3a75737c1c8a9b396173fa0c40449de085';
-
+		'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713';
+	let chainData = {};
 	app.use(bodyParser.urlencoded({ extended: false }));
+	app.use(bodyParser.json());
 
 	app.listen(PORT, () => {
 		console.log(`Miner running at: ${minerID}`);
 	});
 
-	let chainData = await axios.post('http://localhost:5555/connect-miner', {
-		id: minerID,
-	});
-	console.log(chainData.data);
+	const calculateHash = (nonce) => {
+		return crypto
+			.createHash('sha256')
+			.update(
+				chainData.previousBlockHash +
+					chainData.timestamp +
+					JSON.stringify(chainData.pendingTransactions) +
+					nonce
+			)
+			.digest('hex');
+	};
+
+	const mineBlock = async () => {
+		let nonce = 0;
+		let hash = '';
+		while (
+			hash.substring(0, chainData.difficulty) !==
+			Array(chainData.difficulty + 1).join('0')
+		) {
+			nonce++;
+			hash = calculateHash(nonce);
+		}
+
+		console.log(`Block mined: ${hash}`);
+
+		await axios.post('http://localhost:5555/submit-new-block', {
+			hash: hash,
+			nonce: nonce,
+			transactions: chainData.pendingTransactions,
+			difficulty: chainData.difficulty,
+			timestamp: chainData.timestamp,
+			previousHash: chainData.previousBlockHash,
+			miner: publicKey,
+		});
+		preCheck();
+	};
+
+	const preCheck = async () => {
+		chainData = await axios.post('http://localhost:5555/connect-miner', {
+			id: minerID,
+		});
+		chainData = chainData.data;
+		if (chainData.pendingTransactions.length > 0) {
+			mineBlock();
+		} else {
+			setTimeout(() => {
+				preCheck();
+			}, 5000);
+		}
+	};
+
+	preCheck();
 })();

@@ -39,23 +39,11 @@ class Transaction {
 }
 
 class Block {
-	constructor(
-		timestamp,
-		transactions,
-		previousHash,
-		nonce,
-		difficulty,
-		miner,
-		index
-	) {
+	constructor(timestamp, transactions, previousHash, nonce) {
 		this.previousHash = previousHash;
 		this.timestamp = timestamp;
 		this.transactions = transactions;
 		this.nonce = nonce;
-		this.difficulty = difficulty;
-		this.miner = miner;
-		this.hash = this.calculateHash();
-		this.index = index;
 	}
 
 	calculateHash() {
@@ -69,18 +57,6 @@ class Block {
 			)
 			.digest('hex');
 	}
-
-	// mineBlock(difficulty) {
-	// 	while (
-	// 		this.hash.substring(0, difficulty) !==
-	// 		Array(difficulty + 1).join('0')
-	// 	) {
-	// 		this.nonce++;
-	// 		this.hash = this.calculateHash();
-	// 	}
-
-	// 	console.log(`Block mined: ${this.hash}`);
-	// }
 
 	hasValidTransactions() {
 		for (const tx of this.transactions) {
@@ -102,6 +78,21 @@ class Blockchain {
 		this.miningReward = 5000000;
 		this.fee = 100;
 		this.peers = [];
+	}
+
+	createGenesisBlock() {
+		const faucetTx = new Transaction(
+			'',
+			'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713',
+			1000000000000000 * 10000
+		);
+
+		let block = new Block(Date.now(), [faucetTx], '0', 0, 0);
+		block.hash = block.calculateHash();
+		block.miner = 'N/A';
+		block.index = 'genesis';
+
+		return block;
 	}
 
 	addTransaction(transaction) {
@@ -140,17 +131,23 @@ class Blockchain {
 		}
 
 		this.pendingTransactions.push(transaction);
-		return transaction;
+		console.log(`added to pending transactions: ${transaction.hash}`);
+		return transaction.hash;
 	}
 
-	createGenesisBlock() {
-		const faucetTx = new Transaction(
-			'',
-			'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713',
-			1000000000000000 * 10000
+	submitBlock(data) {
+		console.log(data);
+		let block = new Block(
+			data.timestamp,
+			data.transactions,
+			data.previousHash,
+			data.nonce
 		);
-
-		return new Block(Date.now(), [faucetTx], '0', 0, 0, 'N/A', 'genesis');
+		let hash = block.calculateHash();
+		console.log(hash, data.hash);
+		if (hash === data.hash) {
+			console.log(true);
+		}
 	}
 
 	getInfo() {
@@ -179,30 +176,6 @@ class Blockchain {
 	getLatestBlock() {
 		return this.chain[this.chain.length - 1];
 	}
-
-	// minePendingTransactions(miningRewardAddress) {
-	// 	const rewardTx = new Transaction(
-	// 		null,
-	// 		miningRewardAddress,
-	// 		this.miningReward
-	// 	);
-	// 	this.pendingTransactions.push(rewardTx);
-
-	// 	const block = new Block(
-	// 		Date.now(),
-	// 		this.pendingTransactions,
-	// 		this.getLatestBlock().hash,
-	// 		this.difficulty,
-	// 		miningRewardAddress
-	// 	);
-	// 	block.mineBlock(this.difficulty);
-
-	// 	console.log('Block successfully mined!');
-	// 	this.chain.push(block);
-	// 	this.confirmedTransactions = this.confirmedTransactions +=
-	// 		this.pendingTransactions.length;
-	// 	this.pendingTransactions = [];
-	// }
 
 	getBalanceOfAddress(address) {
 		let balance = 0;
