@@ -3,11 +3,11 @@ const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 
 class Transaction {
-	constructor(fromAddress, toAddress, value) {
+	constructor(fromAddress, toAddress, value, timestamp = Date.now()) {
 		this.fromAddress = fromAddress;
 		this.toAddress = toAddress;
 		this.value = value;
-		this.timestamp = Date.now();
+		this.timestamp = timestamp;
 		this.hash = this.calculateHash().toString();
 	}
 	calculateHash() {
@@ -59,8 +59,16 @@ class Block {
 	}
 
 	hasValidTransactions() {
+		console.log(this.transactions);
 		for (const tx of this.transactions) {
-			if (!tx.isValid()) {
+			let trans = new Transaction(
+				tx.fromAddress,
+				tx.toAddress,
+				tx.value,
+				tx.timestamp
+			);
+			trans.signature = tx.signature;
+			if (!trans.isValid()) {
 				return false;
 			}
 		}
@@ -136,7 +144,6 @@ class Blockchain {
 	}
 
 	submitBlock(data) {
-		console.log(data);
 		let block = new Block(
 			data.timestamp,
 			data.transactions,
@@ -144,9 +151,17 @@ class Blockchain {
 			data.nonce
 		);
 		let hash = block.calculateHash();
-		console.log(hash, data.hash);
 		if (hash === data.hash) {
-			console.log(true);
+			block.miner = data.miner;
+			block.hash = hash;
+			block.index = this.chain.length;
+			if (block.hasValidTransactions()) {
+				this.chain.push(block);
+				this.pendingTransactions = [];
+				return true;
+			}
+		} else {
+			return false;
 		}
 	}
 
