@@ -59,7 +59,6 @@ class Block {
 	}
 
 	hasValidTransactions() {
-		console.log(this.transactions);
 		for (const tx of this.transactions) {
 			let trans = new Transaction(
 				tx.fromAddress,
@@ -97,7 +96,7 @@ class Blockchain {
 
 		let block = new Block(Date.now(), [faucetTx], '0', 0, 0);
 		block.hash = block.calculateHash();
-		block.miner = 'N/A';
+		block.miner = null;
 		block.index = 'genesis';
 
 		return block;
@@ -158,7 +157,16 @@ class Blockchain {
 			if (block.hasValidTransactions()) {
 				this.chain.push(block);
 				this.pendingTransactions = [];
-				return true;
+				let minerTrans = new Transaction(
+					null,
+					data.miner,
+					this.miningReward
+				);
+				this.pendingTransactions.push(minerTrans);
+				console.log(
+					`adding to pending transactions: ${minerTrans.hash}`
+				);
+				return true, minerTrans.hash;
 			}
 		} else {
 			return false;
