@@ -25,7 +25,8 @@ const calculateHash = (nonce) => {
 			chainData.previousBlockHash +
 				chainData.timestamp +
 				JSON.stringify(chainData.pendingTransactions) +
-				nonce
+				nonce +
+				publicKey
 		)
 		.digest('hex');
 };
@@ -41,7 +42,6 @@ const mineBlock = async () => {
 		nonce++;
 		hash = calculateHash(nonce);
 	}
-
 	console.log(`Block mined: ${hash}`);
 
 	await axios.post('http://localhost:5555/submit-new-block', {
@@ -71,15 +71,23 @@ const preCheck = async () => {
 		}, 5000);
 	}
 };
-axios
-	.post('http://localhost:5555/connect-miner', {
-		url: minerURL,
-	})
-	.then((res) => {
-		if (validator.isHash(res.data, 'sha256')) {
-			minerID = res.data;
-			preCheck(minerID);
-		} else {
-			console.log('connection with node failed');
-		}
-	});
+
+const connectNode = () => {
+	axios
+		.post('http://localhost:5555/connect-miner', {
+			url: minerURL,
+		})
+		.then((res) => {
+			if (validator.isHash(res.data, 'sha256')) {
+				minerID = res.data;
+				preCheck(minerID);
+			} else {
+				console.log('connection with node failed');
+				setTimeout(() => {
+					connectNode();
+				}, 5000);
+			}
+		});
+};
+
+connectNode();

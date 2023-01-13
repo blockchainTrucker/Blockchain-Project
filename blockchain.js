@@ -14,7 +14,11 @@ class Transaction {
 		return crypto
 			.createHash('sha256')
 			.update(
-				this.fromAddress + this.toAddress + this.value + this.timestamp
+				this.fromAddress +
+					this.toAddress +
+					this.value +
+					this.timestamp +
+					this.miner
 			)
 			.digest('hex');
 	}
@@ -39,11 +43,12 @@ class Transaction {
 }
 
 class Block {
-	constructor(timestamp, transactions, previousHash, nonce) {
+	constructor(timestamp, transactions, previousHash, nonce, miner) {
 		this.previousHash = previousHash;
 		this.timestamp = timestamp;
 		this.transactions = transactions;
 		this.nonce = nonce;
+		this.miner = miner;
 	}
 
 	calculateHash() {
@@ -53,7 +58,8 @@ class Block {
 				this.previousHash +
 					this.timestamp +
 					JSON.stringify(this.transactions) +
-					this.nonce
+					this.nonce +
+					this.miner
 			)
 			.digest('hex');
 	}
@@ -84,7 +90,6 @@ class Blockchain {
 		this.confirmedTransactions = 0;
 		this.miningReward = 5000000;
 		this.fee = 100;
-		this.peers = [];
 	}
 
 	createGenesisBlock() {
@@ -94,9 +99,8 @@ class Blockchain {
 			1000000000000000 * 10000
 		);
 
-		let block = new Block(Date.now(), [faucetTx], '0', 0, 0);
+		let block = new Block(Date.now(), [faucetTx], '0', 0, 0, null);
 		block.hash = block.calculateHash();
-		block.miner = null;
 		block.index = 'genesis';
 
 		return block;
@@ -147,9 +151,12 @@ class Blockchain {
 			data.timestamp,
 			data.transactions,
 			data.previousHash,
-			data.nonce
+			data.nonce,
+			data.miner
 		);
+		console.log(block);
 		let hash = block.calculateHash();
+		console.log(hash, data.hash);
 		if (hash === data.hash) {
 			block.miner = data.miner;
 			block.hash = hash;
