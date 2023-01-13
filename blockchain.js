@@ -14,11 +14,7 @@ class Transaction {
 		return crypto
 			.createHash('sha256')
 			.update(
-				this.fromAddress +
-					this.toAddress +
-					this.value +
-					this.timestamp +
-					this.miner
+				this.fromAddress + this.toAddress + this.value + this.timestamp
 			)
 			.digest('hex');
 	}
