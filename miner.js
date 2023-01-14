@@ -10,7 +10,7 @@ let minerID = '';
 const publicKey =
 	'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713';
 let chainData = {};
-
+let transList = [];
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
@@ -44,16 +44,28 @@ const mineBlock = async () => {
 	}
 	console.log(`Block mined: ${hash}`);
 
-	await axios.post('http://localhost:5555/submit-new-block', {
-		hash: hash,
-		nonce: nonce,
-		transactions: chainData.pendingTransactions,
-		difficulty: chainData.difficulty,
-		timestamp: chainData.timestamp,
-		previousHash: chainData.previousBlockHash,
-		miner: publicKey,
-	});
-	preCheck();
+	await axios
+		.post('http://localhost:5555/submit-new-block', {
+			hash: hash,
+			nonce: nonce,
+			transactions: chainData.pendingTransactions,
+			difficulty: chainData.difficulty,
+			timestamp: chainData.timestamp,
+			previousHash: chainData.previousBlockHash,
+			miner: publicKey,
+			url: minerURL,
+			id: minerID,
+		})
+		.then((res) => {
+			if (res.data[0] === true) {
+				transList.push(res.data[1]);
+				preCheck();
+			} else if (res === 'invalid credentials') {
+				connectNode();
+			} else {
+				preCheck();
+			}
+		});
 };
 
 const preCheck = async () => {

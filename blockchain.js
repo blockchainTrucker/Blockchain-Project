@@ -23,7 +23,11 @@ class Transaction {
 		const key = ec.keyFromPrivate(privateKey, 'hex');
 		const sig = key.sign(this.hash, 'base64');
 		this.signature = sig.toDER('hex');
-		return this;
+		if (this.isValid()) {
+			return [true, this];
+		} else {
+			return [false];
+		}
 	}
 
 	isValid() {
@@ -107,10 +111,6 @@ class Blockchain {
 			throw new Error('Transaction must include from and to address');
 		}
 
-		if (!transaction.isValid()) {
-			throw new Error('Cannot add invalid transaction to chain');
-		}
-
 		if (transaction.value <= 0) {
 			throw new Error('Transaction amount should be higher than 0');
 		}
@@ -142,6 +142,20 @@ class Blockchain {
 		return transaction.hash;
 	}
 
+	createTransaction(data) {
+		const tx = new Transaction(
+			data.fromAddress,
+			data.toAddress,
+			data.value
+		);
+		const signedTx = tx.signTransaction(data.privateKey);
+		if (signedTx[0] === true) {
+			return this.addTransaction(signedTx[1]);
+		} else {
+			return 'invalid transaction';
+		}
+	}
+
 	submitBlock(data) {
 		let block = new Block(
 			data.timestamp,
@@ -150,9 +164,7 @@ class Blockchain {
 			data.nonce,
 			data.miner
 		);
-		console.log(block);
 		let hash = block.calculateHash();
-		console.log(hash, data.hash);
 		if (hash === data.hash) {
 			block.miner = data.miner;
 			block.hash = hash;
@@ -169,7 +181,7 @@ class Blockchain {
 				console.log(
 					`adding to pending transactions: ${minerTrans.hash}`
 				);
-				return true, minerTrans.hash;
+				return [true, minerTrans.hash];
 			}
 		} else {
 			return false;
@@ -222,7 +234,7 @@ class Blockchain {
 		const value = 100000000;
 		const tx = new Transaction(faucetAddress, toAddress, value);
 		const signedTx = tx.signTransaction(privateKey);
-		this.addTransaction(signedTx);
+		this.addTransaction(signedTx[1]);
 		return `sent 1 coin to ${toAddress}`;
 	}
 

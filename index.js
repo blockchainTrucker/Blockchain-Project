@@ -8,7 +8,7 @@ const PORT = 5555;
 const nodeID = `http://localhost:${PORT}`;
 const { Blockchain, Transaction } = require('./blockchain');
 const axios = require('axios');
-const miner = require('./miner');
+// const miner = require('./miner');
 const validator = require('validator');
 
 const faucetPrivateKey =
@@ -25,6 +25,31 @@ const calculateHash = (url) => {
 		.createHash('sha256')
 		.update(url + Date.now())
 		.digest('hex');
+};
+
+const isValidSecp256k1PrivateKey = (key) => {
+	try {
+		crypto.createECDH('secp256k1').setPrivateKey(key, 'hex');
+		return true;
+	} catch (err) {
+		return false;
+	}
+};
+
+const getSecp256k1PublicKey = (privateKey) => {
+	try {
+		const ecdh = crypto.createECDH('secp256k1');
+		ecdh.setPrivateKey(privateKey, 'hex');
+		const publicKey = ecdh.getPublicKey();
+		return publicKey.toString('hex');
+	} catch (err) {
+		console.log(err);
+	}
+};
+
+const isValidSecp256k1PublicKey = (key) => {
+	const pattern = /^04[0-9a-fA-F]{128}$/;
+	return pattern.test(key);
 };
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -57,9 +82,29 @@ app.get('/chain', (req, res) => {
 	res.send(JSON.stringify(coin.chain));
 });
 
-app.post('/transaction', (req, res) => {
+app.post('/add-transaction', (req, res) => {
 	const transaction = req.body;
-	res.send(JSON.stringify(coin.addTransaction(transaction)));
+
+	if (isValidSecp256k1PrivateKey(transaction.privateKey)) {
+		let publicFromPrivate = getSecp256k1PublicKey(transaction.privateKey);
+		if (publicFromPrivate === transaction.fromAddress) {
+			if (transaction.value > 0) {
+				if (isValidSecp256k1PublicKey(transaction.toAddress)) {
+					res.send(
+						JSON.stringify(coin.createTransaction(transaction))
+					);
+				} else {
+					res.send(JSON.stringify('invalid transaction'));
+				}
+			} else {
+				res.send(JSON.stringify('invalid transaction'));
+			}
+		} else {
+			res.send(JSON.stringify('invalid transaction'));
+		}
+	} else {
+		res.send(JSON.stringify('invalid transaction'));
+	}
 });
 
 app.post('/wallet-balance', (req, res) => {
@@ -69,8 +114,12 @@ app.post('/wallet-balance', (req, res) => {
 
 app.post('/faucet', (req, res) => {
 	const address = req.body.address;
-	coin.faucet(faucetPublicKey, address, faucetPrivateKey);
-	res.send(JSON.stringify(`sent 1 coin to ${address}`));
+	if (isValidSecp256k1PublicKey(address)) {
+		coin.faucet(faucetPublicKey, address, faucetPrivateKey);
+		res.send(JSON.stringify(`sent 1 coin to ${address}`));
+	} else {
+		res.send(JSON.stringify(`invalid request`));
+	}
 });
 
 app.get('/pending-transactions', (req, res) => {
@@ -87,14 +136,16 @@ app.post('/connect-miner', (req, res) => {
 	) {
 		let count = 0;
 		for (const miner of miners) {
-			if (miner === id) {
+			if (miner.url === url) {
 				count++;
 			}
 		}
-		let miner = { url: url, id: calculateHash(url) };
 		if (count === 0) {
+			let miner = { url: url, id: calculateHash(url) };
 			miners.push(miner);
 			res.send(JSON.stringify(miner.id));
+		} else {
+			res.send(JSON.stringify('already connected'));
 		}
 	} else {
 		res.send(JSON.stringify('invalid URL'));
@@ -121,8 +172,61 @@ app.post('/miner-info', (req, res) => {
 
 app.post('/submit-new-block', (req, res) => {
 	let block = req.body;
-	coin.submitBlock(block);
-	res.send(JSON.stringify(req.body.hash));
+	if (
+		validator.isURL(block.url, {
+			require_tld: false,
+			require_port: true,
+		})
+	) {
+		let minerIndex = miners.findIndex((miner) => miner.url === block.url);
+		if (minerIndex === -1) {
+			res.send(JSON.stringify('not connected'));
+		} else {
+			if (miners[minerIndex].id === block.id) {
+				if (
+					block.previousHash ===
+					coin.chain[coin.chain.length - 1].hash
+				) {
+					let submit = coin.submitBlock(block);
+					if (submit[0] === true) {
+						res.send(JSON.stringify(submit));
+					} else {
+						res.send(JSON.stringify('invalid block'));
+					}
+				} else {
+					res.send(JSON.stringify('invalid block'));
+				}
+			} else {
+				res.send(JSON.stringify('invalid credentials'));
+			}
+		}
+	}
+});
+
+app.post('/connect-peer', (req, res) => {
+	const url = req.body.url;
+	if (
+		validator.isURL(url, {
+			require_tld: false,
+			require_port: true,
+		})
+	) {
+		let count = 0;
+		for (const miner of miners) {
+			if (miner.url === url) {
+				count++;
+			}
+		}
+		if (count === 0) {
+			let peer = { url: url, id: calculateHash(url) };
+			miners.push(miner);
+			res.send(JSON.stringify(miner.id));
+		} else {
+			res.send(JSON.stringify('already connected'));
+		}
+	} else {
+		res.send(JSON.stringify('invalid URL'));
+	}
 });
 
 app.listen(PORT, () => {
