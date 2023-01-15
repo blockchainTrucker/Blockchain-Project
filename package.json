@@ -5,7 +5,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "nodemon index.js"
+		"start": "npm-run-all -p index miner",
+		"index": "node index.js",
+		"miner": "node miner.js"
 	},
 	"repository": {
 		"type": "git",
@@ -23,5 +25,9 @@
 		"express": "^4.18.2",
 		"nodemon": "^2.0.20",
 		"validator": "^13.7.0"
+	},
+	"devDependencies": {
+		"concurrently": "^7.6.0",
+		"npm-run-all": "^4.1.5"
 	}
 }

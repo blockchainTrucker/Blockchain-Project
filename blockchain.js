@@ -99,7 +99,7 @@ class Blockchain {
 			1000000000000000 * 10000
 		);
 
-		let block = new Block(Date.now(), [faucetTx], '0', 0, 0, null);
+		let block = new Block(Date.now(), [faucetTx], '0', 0, null);
 		block.hash = block.calculateHash();
 		block.index = 'genesis';
 
@@ -146,13 +146,23 @@ class Blockchain {
 		const tx = new Transaction(
 			data.fromAddress,
 			data.toAddress,
-			data.value
+			parseInt(data.value)
 		);
 		const signedTx = tx.signTransaction(data.privateKey);
 		if (signedTx[0] === true) {
 			return this.addTransaction(signedTx[1]);
 		} else {
 			return 'invalid transaction';
+		}
+	}
+
+	removeBlockTransactions(transactions) {
+		for (const transaction of transactions) {
+			for (let i = 0; i <= this.pendingTransactions.length - 1; i++) {
+				if (transaction.hash === this.pendingTransactions[i].hash) {
+					this.pendingTransactions.splice(i, 1);
+				}
+			}
 		}
 	}
 
@@ -171,7 +181,7 @@ class Blockchain {
 			block.index = this.chain.length;
 			if (block.hasValidTransactions()) {
 				this.chain.push(block);
-				this.pendingTransactions = [];
+				this.removeBlockTransactions(block.transactions);
 				let minerTrans = new Transaction(
 					null,
 					data.miner,
@@ -194,7 +204,6 @@ class Blockchain {
 			peers: this.peers,
 			difficulty: this.difficulty,
 			length: this.chain.length,
-			confirmedTransactions: this.confirmedTransactions,
 			pendingTransactions: this.pendingTransactions.length,
 		};
 	}
@@ -221,9 +230,11 @@ class Blockchain {
 			for (const trans of block.transactions) {
 				if (trans.fromAddress === address) {
 					balance -= trans.value;
+					console.log(balance);
 				}
 				if (trans.toAddress === address) {
 					balance += trans.value;
+					console.log(balance);
 				}
 			}
 		}

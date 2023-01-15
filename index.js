@@ -84,20 +84,24 @@ app.get('/chain', (req, res) => {
 
 app.post('/add-transaction', (req, res) => {
 	const transaction = req.body;
-
 	if (isValidSecp256k1PrivateKey(transaction.privateKey)) {
 		let publicFromPrivate = getSecp256k1PublicKey(transaction.privateKey);
 		if (publicFromPrivate === transaction.fromAddress) {
 			if (transaction.value > 0) {
-				if (isValidSecp256k1PublicKey(transaction.toAddress)) {
-					res.send(
-						JSON.stringify(coin.createTransaction(transaction))
-					);
+				let balance = coin.getBalanceOfAddress(transaction.fromAddress);
+				if (balance > parseInt(transaction.value)) {
+					if (isValidSecp256k1PublicKey(transaction.toAddress)) {
+						res.send(
+							JSON.stringify(coin.createTransaction(transaction))
+						);
+					} else {
+						res.send(JSON.stringify('invalid transaction'));
+					}
 				} else {
-					res.send(JSON.stringify('invalid transaction'));
+					res.send(JSON.stringify('insufficient balance'));
 				}
 			} else {
-				res.send(JSON.stringify('invalid transaction'));
+				res.send(JSON.stringify('transaction must be greater than 0'));
 			}
 		} else {
 			res.send(JSON.stringify('invalid transaction'));
