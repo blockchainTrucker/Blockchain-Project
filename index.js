@@ -1,14 +1,13 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-const EC = require('elliptic').ec;
-const ec = new EC('secp256k1');
 const crypto = require('crypto');
 const PORT = 5555;
 const nodeID = `http://localhost:${PORT}`;
-const { Blockchain } = require('./blockchain');
+const { Blockchain, Transaction } = require('./blockchain');
 const axios = require('axios');
 const validator = require('validator');
+const e = require('express');
 
 const faucetPrivateKey =
 	'1d9f52460c220ef032f0e510082c21b01c8059a503080afc5ffd1aad48efc6d8';
@@ -20,7 +19,7 @@ let peers = [];
 let miners = [];
 
 const connectNode = () => {
-	let requestedNode = 'http://localhost:5555';
+	let requestedNode = 'http://localhost:4444';
 	axios
 		.post(`${requestedNode}/connect-peer`, {
 			url: nodeID,
@@ -33,7 +32,7 @@ const connectNode = () => {
 
 				if (coin.isChainValid(nodeInfo[1])) {
 					coin.chain = nodeInfo[1];
-					coin.pendingTransactions[2];
+					coin.pendingTransactions = nodeInfo[2];
 				}
 			} else if (nodeInfo[0] === 'already connected') {
 				console.log('already connected... waiting 20 seconds');
@@ -49,7 +48,7 @@ const connectNode = () => {
 		});
 };
 
-// connectNode();
+connectNode();
 
 const calculateHash = (url) => {
 	return crypto
@@ -122,9 +121,23 @@ app.post('/add-transaction', (req, res) => {
 				let balance = coin.getBalanceOfAddress(transaction.fromAddress);
 				if (balance > parseInt(transaction.value)) {
 					if (isValidSecp256k1PublicKey(transaction.toAddress)) {
-						res.send(
-							JSON.stringify(coin.createTransaction(transaction))
-						);
+						let tx = coin.createTransaction(transaction);
+						for (let i = 0; i < peers.length; i++) {
+							axios
+								.post(`${peers[i].url}/peer-transaction`, {
+									transaction: transaction,
+									url: nodeID,
+									id: peers[i].id,
+								})
+								.then(() => {})
+								.catch(() => {
+									peers.splice(peers[(i, 1)]);
+									console.log(
+										`no response from ${peers[i].url}`
+									);
+								});
+						}
+						res.send(JSON.stringify(tx.hash));
 					} else {
 						res.send(JSON.stringify('invalid transaction'));
 					}
@@ -142,6 +155,58 @@ app.post('/add-transaction', (req, res) => {
 	}
 });
 
+app.post('/peer-transaction', (req, res) => {
+	let reqTx = req.body.transaction;
+	let peerData = { url: req.body.url, id: req.body.id };
+	let peerIndex = peers.findIndex((peer) => peer.url === peerData.url);
+	console.log(peerIndex);
+	if (peerIndex === -1) {
+		res.send(JSON.stringify('not connected'));
+	} else if (peers[peerIndex].id === peerData.id) {
+		console.log(reqTx);
+		let tx = new Transaction(
+			reqTx.fromAddress,
+			reqTx.toAddress,
+			parseInt(reqTx.value),
+			reqTx.timestamp
+		);
+		if (tx.hash === reqTx.hash) {
+			tx.signature = reqTx.signature;
+			if (tx.isValid()) {
+				let transIndex = coin.pendingTransactions.findIndex(
+					(trans) => trans.hash === tx.hash
+				);
+				if (transIndex >= 0) {
+					res.send(
+						JSON.stringify(
+							'transaction exists on pending transactions'
+						)
+					);
+				} else {
+					for (const block of coin.chain) {
+						transIndex = block.transactions.findIndex(
+							(trans) => trans.hash === tx.hash
+						);
+						if (transIndex >= 0) {
+							JSON.stringify('transaction already on chain');
+						} else {
+							coin.pendingTransactions.push(tx);
+							JSON.stringify('transaction added');
+						}
+					}
+				}
+			}
+		} else {
+			console.log('invalid');
+			res.send(JSON.stringify('invalid transaction'));
+		}
+	} else {
+		console.log('invalid');
+
+		res.send(JSON.stringify('invalid credentials'));
+	}
+});
+
 app.post('/wallet-balance', (req, res) => {
 	const address = req.body.address;
 	res.send(JSON.stringify(coin.getBalanceOfAddress(address)));
@@ -150,7 +215,25 @@ app.post('/wallet-balance', (req, res) => {
 app.post('/faucet', (req, res) => {
 	const address = req.body.address;
 	if (isValidSecp256k1PublicKey(address)) {
-		coin.faucet(faucetPublicKey, address, faucetPrivateKey);
+		let transaction = coin.faucet(
+			faucetPublicKey,
+			address,
+			faucetPrivateKey
+		);
+		for (let i = 0; i < peers.length; i++) {
+			console.log(peers[i].url);
+			axios
+				.post(`${peers[i].url}/peer-transaction`, {
+					transaction: transaction,
+					url: nodeID,
+					id: peers[i].id,
+				})
+				.then(() => {})
+				.catch(() => {
+					console.log(`no response from ${peers[i].url}`);
+					peers.splice(peers[(i, 1)]);
+				});
+		}
 		res.send(JSON.stringify(`sent 1 coin to ${address}`));
 	} else {
 		res.send(JSON.stringify(`invalid request`));
@@ -224,10 +307,64 @@ app.post('/submit-new-block', (req, res) => {
 				) {
 					let submit = coin.submitBlock(block);
 					if (submit[0] === true) {
+						for (let i = 0; i < peers.length; i++) {
+							axios
+								.post(`${peers[i].url}/peer-block`, {
+									block: block,
+									url: nodeID,
+									id: peers[i].id,
+								})
+								.then(() => {})
+								.catch(() => {
+									console.log(
+										`no response from ${peers[i].url}`
+									);
+									peers.splice(peers[(i, 1)]);
+								});
+						}
 						res.send(JSON.stringify(submit));
 					} else {
 						res.send(JSON.stringify('invalid block'));
 					}
+				} else {
+					res.send(JSON.stringify('invalid block'));
+				}
+			} else {
+				res.send(JSON.stringify('invalid credentials'));
+			}
+		}
+	}
+});
+
+app.post('/peer-block', (req, res) => {
+	let block = req.body.block;
+	let peerData = { url: req.body.url, id: req.body.id };
+
+	if (
+		validator.isURL(block.url, {
+			require_tld: false,
+			require_port: true,
+		})
+	) {
+		let peerIndex = peers.findIndex((peer) => peer.url === peerData.url);
+		if (peerIndex === -1) {
+			res.send(JSON.stringify('not connected'));
+		} else {
+			if (peers[peerIndex].id === peerData.id) {
+				if (
+					block.previousHash ===
+					coin.chain[coin.chain.length - 1].hash
+				) {
+					let submit = coin.submitBlock(block);
+					if (submit[0] === true) {
+						res.send(JSON.stringify(submit));
+					} else {
+						res.send(JSON.stringify('invalid block'));
+					}
+				} else if (
+					block.hash === coin.chain[coin.chain.length - 1].hash
+				) {
+					res.send(JSON.stringify('block already added'));
 				} else {
 					res.send(JSON.stringify('invalid block'));
 				}

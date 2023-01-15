@@ -141,14 +141,14 @@ class Blockchain {
 
 		this.pendingTransactions.push(transaction);
 		console.log(`added to pending transactions: ${transaction.hash}`);
-		return transaction.hash;
+		return transaction;
 	}
 
 	createTransaction(data) {
 		const tx = new Transaction(
 			data.fromAddress,
 			data.toAddress,
-			parseInt(data.value)
+			data.value
 		);
 		const signedTx = tx.signTransaction(data.privateKey);
 		if (signedTx[0] === true) {
@@ -266,7 +266,7 @@ class Blockchain {
 		const tx = new Transaction(faucetAddress, toAddress, value);
 		const signedTx = tx.signTransaction(privateKey);
 		this.addTransaction(signedTx[1]);
-		return `sent 1 coin to ${toAddress}`;
+		return signedTx[1];
 	}
 
 	getAllTransactionsForWallet(address) {

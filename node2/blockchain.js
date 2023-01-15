@@ -266,7 +266,7 @@ class Blockchain {
 		const tx = new Transaction(faucetAddress, toAddress, value);
 		const signedTx = tx.signTransaction(privateKey);
 		this.addTransaction(signedTx[1]);
-		return `sent 1 coin to ${toAddress}`;
+		return signedTx[1];
 	}
 
 	getAllTransactionsForWallet(address) {
