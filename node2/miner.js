@@ -3,7 +3,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const axios = require('axios');
-const PORT = 6000;
+const PORT = 5000;
 const validator = require('validator');
 const minerURL = `http://localhost:${PORT}`;
 let minerID = '';
@@ -45,7 +45,7 @@ const mineBlock = async () => {
 	console.log(`Block mined: ${hash}`);
 
 	await axios
-		.post('http://localhost:5555/submit-new-block', {
+		.post('http://localhost:4444/submit-new-block', {
 			hash: hash,
 			nonce: nonce,
 			transactions: chainData.pendingTransactions,
@@ -69,7 +69,7 @@ const mineBlock = async () => {
 };
 
 const preCheck = async () => {
-	chainData = await axios.post('http://localhost:5555/miner-info', {
+	chainData = await axios.post('http://localhost:4444/miner-info', {
 		url: minerURL,
 		id: minerID,
 	});
@@ -86,13 +86,13 @@ const preCheck = async () => {
 
 const connectNode = () => {
 	axios
-		.post('http://localhost:5555/connect-miner', {
+		.post('http://localhost:4444/connect-miner', {
 			url: minerURL,
 		})
 		.then((res) => {
 			if (validator.isHash(res.data, 'sha256')) {
 				minerID = res.data;
-				preCheck(minerID);
+				preCheck();
 			} else {
 				console.log('connection with node failed');
 				setTimeout(() => {

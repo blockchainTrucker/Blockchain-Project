@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 const crypto = require('crypto');
-const PORT = 5555;
+const PORT = 4444;
 const nodeID = `http://localhost:${PORT}`;
 const { Blockchain } = require('./blockchain');
 const axios = require('axios');
@@ -33,7 +33,7 @@ const connectNode = () => {
 
 				if (coin.isChainValid(nodeInfo[1])) {
 					coin.chain = nodeInfo[1];
-					coin.pendingTransactions[2];
+					coin.pendingTransactions = nodeInfo[2];
 				}
 			} else if (nodeInfo[0] === 'already connected') {
 				console.log('already connected... waiting 20 seconds');
@@ -49,7 +49,7 @@ const connectNode = () => {
 		});
 };
 
-// connectNode();
+connectNode();
 
 const calculateHash = (url) => {
 	return crypto
@@ -178,6 +178,7 @@ app.post('/connect-miner', (req, res) => {
 		if (count === 0) {
 			let miner = { url: url, id: calculateHash(url) };
 			miners.push(miner);
+			console.log(miners);
 			res.send(JSON.stringify(miner.id));
 		} else {
 			res.send(JSON.stringify('already connected'));

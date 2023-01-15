@@ -1,0 +1,33 @@
+{
+	"name": "blockchain-project",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "npm-run-all -p index miner",
+		"index": "node index.js",
+		"miner": "node miner.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jwachtel96/Blockchain-Project.git"
+	},
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/jwachtel96/Blockchain-Project/issues"
+	},
+	"dependencies": {
+		"axios": "^1.2.2",
+		"crypto": "^1.0.1",
+		"elliptic": "^6.5.4",
+		"express": "^4.18.2",
+		"nodemon": "^2.0.20",
+		"validator": "^13.7.0"
+	},
+	"devDependencies": {
+		"concurrently": "^7.6.0",
+		"npm-run-all": "^4.1.5"
+	}
+}
