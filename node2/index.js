@@ -18,26 +18,26 @@ let peers = [];
 let miners = [];
 
 const connectNode = () => {
-	let requestedNode = 'http://localhost:5555';
+	let requestedNode = 'http://localhost:4444';
 	axios
 		.post(`${requestedNode}/connect-peer`, {
 			url: nodeID,
 		})
 		.then((res) => {
 			let nodeInfo = res.data;
-			console.log(nodeInfo);
 			if (validator.isHash(nodeInfo[0], 'sha256')) {
 				peers.push({ url: requestedNode, id: nodeInfo[0] });
-
+				console.log(coin.isChainValid(nodeInfo[1]));
 				if (coin.isChainValid(nodeInfo[1])) {
-					coin.chain = nodeInfo[1];
 					coin.pendingTransactions = nodeInfo[2];
+					console.log(nodeInfo[2], coin.pendingTransactions);
+					coin.chain = nodeInfo[1];
 				}
 			} else if (nodeInfo[0] === 'already connected') {
 				console.log('already connected... waiting 20 seconds');
 				setTimeout(() => {
 					connectNode();
-				}, 5000);
+				}, 4 * 5000);
 			} else {
 				console.log('connection with node failed... waiting 5 seconds');
 				setTimeout(() => {
@@ -187,9 +187,11 @@ app.post('/peer-transaction', (req, res) => {
 							(trans) => trans.hash === tx.hash
 						);
 						if (transIndex >= 0) {
+							console.log('transaction already on chain');
 							JSON.stringify('transaction already on chain');
 						} else {
 							coin.pendingTransactions.push(tx);
+							console.log('transaction added');
 							JSON.stringify('transaction added');
 						}
 					}
@@ -313,6 +315,7 @@ app.post('/submit-new-block', (req, res) => {
 									block: block,
 									url: nodeID,
 									id: peers[i].id,
+									minerTrans: submit[1],
 								})
 								.then(() => {})
 								.catch(() => {
@@ -338,6 +341,7 @@ app.post('/submit-new-block', (req, res) => {
 
 app.post('/peer-block', (req, res) => {
 	let block = req.body.block;
+	let minerTrans = req.body.minerTrans;
 	let peerData = { url: req.body.url, id: req.body.id };
 
 	if (
@@ -355,10 +359,11 @@ app.post('/peer-block', (req, res) => {
 					block.previousHash ===
 					coin.chain[coin.chain.length - 1].hash
 				) {
-					let submit = coin.submitBlock(block);
+					let submit = coin.peerBlock(block, minerTrans);
 					if (submit[0] === true) {
 						res.send(JSON.stringify(submit));
 					} else {
+						console.log('invalid block');
 						res.send(JSON.stringify('invalid block'));
 					}
 				} else if (

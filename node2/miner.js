@@ -8,7 +8,7 @@ const validator = require('validator');
 const minerURL = `http://localhost:${PORT}`;
 let minerID = '';
 const publicKey =
-	'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713';
+	'041ff5b39b7a9f4c0e7e09091495cb09831495a7602a745361465fb2f8c124558eb4efb2c8ebb5736c39d13d426dd4577c0ac55c67abadf36345617e5d833b822b';
 let chainData = {};
 let transList = [];
 app.use(bodyParser.urlencoded({ extended: false }));

@@ -49,6 +49,7 @@ class Block {
 		this.transactions = transactions;
 		this.nonce = nonce;
 		this.miner = miner;
+		this.hash = this.calculateHash();
 	}
 
 	calculateHash() {
@@ -162,9 +163,50 @@ class Blockchain {
 		for (const transaction of transactions) {
 			for (let i = 0; i <= this.pendingTransactions.length - 1; i++) {
 				if (transaction.hash === this.pendingTransactions[i].hash) {
+					console.log(this.pendingTransactions.splice(i, 1));
 					this.pendingTransactions.splice(i, 1);
 				}
 			}
+		}
+	}
+
+	pendingTxCleanup() {
+		for (let i = 0; i < this.pendingTransactions.length; i++) {
+			for (const block of this.chain) {
+				for (let j = 0; j < block.transactions.length; j++) {
+					if (this.pendingTransactions[i] === block.transactions[j]) {
+						this.pendingTransactions.splice(i, 1);
+					}
+				}
+			}
+		}
+	}
+
+	peerBlock(data, minerTrans) {
+		let block = new Block(
+			data.timestamp,
+			data.transactions,
+			data.previousHash,
+			data.nonce,
+			data.miner
+		);
+		let hash = block.calculateHash();
+		if (hash === data.hash) {
+			block.miner = data.miner;
+			block.hash = hash;
+			block.index = this.chain.length;
+			if (block.hasValidTransactions()) {
+				this.chain.push(block);
+				console.log(minerTrans);
+				if (block.miner === minerTrans.toAddress) {
+					this.pendingTransactions.push(minerTrans);
+				}
+				this.removeBlockTransactions(block.transactions);
+				// this.pendingTxCleanup();
+				return [true];
+			}
+		} else {
+			return false;
 		}
 	}
 
@@ -184,16 +226,18 @@ class Blockchain {
 			if (block.hasValidTransactions()) {
 				this.chain.push(block);
 				this.removeBlockTransactions(block.transactions);
+				// this.pendingTxCleanup();
 				let minerTrans = new Transaction(
 					null,
 					data.miner,
 					this.miningReward
 				);
 				this.pendingTransactions.push(minerTrans);
+
 				console.log(
 					`adding to pending transactions: ${minerTrans.hash}`
 				);
-				return [true, minerTrans.hash];
+				return [true, minerTrans];
 			}
 		} else {
 			return false;
@@ -284,18 +328,29 @@ class Blockchain {
 
 	isChainValid(newChain) {
 		for (let i = 1; i < newChain.length; i++) {
-			const currentBlock = newChain.chain[i];
-			const previousBlock = newChain.chain[i - 1];
-
-			if (currentBlock.hash !== currentBlock.calculateHash()) {
+			const currentBlock = new Block(
+				newChain[i].timestamp,
+				newChain[i].transactions,
+				newChain[i].previousHash,
+				newChain[i].nonce,
+				newChain[i].miner
+			);
+			const previousBlock = new Block(
+				newChain[i - 1].timestamp,
+				newChain[i - 1].transactions,
+				newChain[i - 1].previousHash,
+				newChain[i - 1].nonce,
+				newChain[i - 1].miner
+			);
+			if (newChain[i].hash !== currentBlock.hash) {
 				return false;
 			}
 
+			// Compare previousHash and hash of previous block
 			if (currentBlock.previousHash !== previousBlock.hash) {
 				return false;
 			}
 		}
-
 		return true;
 	}
 }
