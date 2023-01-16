@@ -163,20 +163,7 @@ class Blockchain {
 		for (const transaction of transactions) {
 			for (let i = 0; i <= this.pendingTransactions.length - 1; i++) {
 				if (transaction.hash === this.pendingTransactions[i].hash) {
-					console.log(this.pendingTransactions.splice(i, 1));
 					this.pendingTransactions.splice(i, 1);
-				}
-			}
-		}
-	}
-
-	pendingTxCleanup() {
-		for (let i = 0; i < this.pendingTransactions.length; i++) {
-			for (const block of this.chain) {
-				for (let j = 0; j < block.transactions.length; j++) {
-					if (this.pendingTransactions[i] === block.transactions[j]) {
-						this.pendingTransactions.splice(i, 1);
-					}
 				}
 			}
 		}
@@ -197,12 +184,10 @@ class Blockchain {
 			block.index = this.chain.length;
 			if (block.hasValidTransactions()) {
 				this.chain.push(block);
-				console.log(minerTrans);
 				if (block.miner === minerTrans.toAddress) {
 					this.pendingTransactions.push(minerTrans);
 				}
 				this.removeBlockTransactions(block.transactions);
-				// this.pendingTxCleanup();
 				return [true];
 			}
 		} else {
@@ -226,7 +211,6 @@ class Blockchain {
 			if (block.hasValidTransactions()) {
 				this.chain.push(block);
 				this.removeBlockTransactions(block.transactions);
-				// this.pendingTxCleanup();
 				let minerTrans = new Transaction(
 					null,
 					data.miner,

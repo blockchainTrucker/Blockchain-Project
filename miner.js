@@ -42,8 +42,6 @@ const mineBlock = async () => {
 		nonce++;
 		hash = calculateHash(nonce);
 	}
-	console.log(`Block mined: ${hash}`);
-
 	await axios
 		.post('http://localhost:5555/submit-new-block', {
 			hash: hash,
@@ -58,6 +56,7 @@ const mineBlock = async () => {
 		})
 		.then((res) => {
 			if (res.data[0] === true) {
+				console.log(`Block mined: ${hash}`);
 				transList.push(res.data[1]);
 				preCheck();
 			} else if (res === 'invalid credentials') {
@@ -73,7 +72,6 @@ const preCheck = async () => {
 		url: minerURL,
 		id: minerID,
 	});
-	console.log(chainData.data);
 	chainData = chainData.data;
 	if (chainData.pendingTransactions.length > 0) {
 		mineBlock();

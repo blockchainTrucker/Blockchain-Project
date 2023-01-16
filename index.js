@@ -28,7 +28,6 @@ const connectNode = () => {
 			let nodeInfo = res.data;
 			if (validator.isHash(nodeInfo[0], 'sha256')) {
 				peers.push({ url: requestedNode, id: nodeInfo[0] });
-				console.log(coin.isChainValid(nodeInfo[1]));
 				if (coin.isChainValid(nodeInfo[1])) {
 					coin.pendingTransactions = nodeInfo[2];
 					coin.chain = nodeInfo[1];
@@ -158,11 +157,9 @@ app.post('/peer-transaction', (req, res) => {
 	let reqTx = req.body.transaction;
 	let peerData = { url: req.body.url, id: req.body.id };
 	let peerIndex = peers.findIndex((peer) => peer.url === peerData.url);
-	console.log(peerIndex);
 	if (peerIndex === -1) {
 		res.send(JSON.stringify('not connected'));
 	} else if (peers[peerIndex].id === peerData.id) {
-		console.log(true);
 		let tx = new Transaction(
 			reqTx.fromAddress,
 			reqTx.toAddress,
@@ -262,7 +259,6 @@ app.post('/connect-miner', (req, res) => {
 		if (count === 0) {
 			let miner = { url: url, id: calculateHash(url) };
 			miners.push(miner);
-			console.log(miners);
 			res.send(JSON.stringify(miner.id));
 		} else {
 			res.send(JSON.stringify('already connected'));
