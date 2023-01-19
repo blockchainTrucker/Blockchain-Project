@@ -330,7 +330,6 @@ class Blockchain {
 				return false;
 			}
 
-			// Compare previousHash and hash of previous block
 			if (currentBlock.previousHash !== previousBlock.hash) {
 				return false;
 			}

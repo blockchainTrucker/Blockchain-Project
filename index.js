@@ -7,19 +7,18 @@ const nodeID = `http://localhost:${PORT}`;
 const { Blockchain, Transaction } = require('./blockchain');
 const axios = require('axios');
 const validator = require('validator');
-const e = require('express');
 
 const faucetPrivateKey =
 	'1d9f52460c220ef032f0e510082c21b01c8059a503080afc5ffd1aad48efc6d8';
 const faucetPublicKey =
 	'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713';
+let requestedNode = 'http://localhost:4444';
 const coin = new Blockchain();
 
 let peers = [];
 let miners = [];
 
 const connectNode = () => {
-	let requestedNode = 'http://localhost:4444';
 	axios
 		.post(`${requestedNode}/connect-peer`, {
 			url: nodeID,
@@ -123,7 +122,7 @@ app.post('/add-transaction', (req, res) => {
 						for (let i = 0; i < peers.length; i++) {
 							axios
 								.post(`${peers[i].url}/peer-transaction`, {
-									transaction: transaction,
+									transaction: tx,
 									url: nodeID,
 									id: peers[i].id,
 								})
@@ -180,18 +179,27 @@ app.post('/peer-transaction', (req, res) => {
 					);
 				} else {
 					for (const block of coin.chain) {
-						transIndex = block.transactions.findIndex(
+						let transIndex = block.transactions.findIndex(
 							(trans) => trans.hash === tx.hash
 						);
 						if (transIndex >= 0) {
 							console.log('transaction already on chain');
-							JSON.stringify('transaction already on chain');
-						} else {
-							coin.pendingTransactions.push(tx);
-							console.log('transaction added');
-							JSON.stringify('transaction added');
+							res.send(
+								JSON.stringify('transaction already on chain')
+							);
 						}
 					}
+					for (const transaction of coin.pendingTransactions) {
+						if (transaction.hash === tx.hash) {
+							console.log('transaction already pending');
+							res.send(
+								JSON.stringify('transaction already pending')
+							);
+						}
+					}
+					coin.pendingTransactions.push(tx);
+					console.log('transaction added');
+					res.send(JSON.stringify('transaction added'));
 				}
 			}
 		} else {
@@ -199,8 +207,7 @@ app.post('/peer-transaction', (req, res) => {
 			res.send(JSON.stringify('invalid transaction'));
 		}
 	} else {
-		console.log('invalid');
-
+		console.log('invalid credentials');
 		res.send(JSON.stringify('invalid credentials'));
 	}
 });
@@ -213,13 +220,31 @@ app.post('/wallet-balance', (req, res) => {
 app.post('/faucet', (req, res) => {
 	const address = req.body.address;
 	if (isValidSecp256k1PublicKey(address)) {
+		for (const block of coin.chain) {
+			for (const transaction of block.transactions) {
+				if (transaction.fromAddress === faucetPublicKey) {
+					if (transaction.toAddress === address) {
+						if (
+							Date.now() - transaction.timestamp <
+							1000 * 60 * 60
+						) {
+							res.send(
+								JSON.stringify(
+									'you can only make 1 request per hour'
+								)
+							);
+							return;
+						}
+					}
+				}
+			}
+		}
 		let transaction = coin.faucet(
 			faucetPublicKey,
 			address,
 			faucetPrivateKey
 		);
 		for (let i = 0; i < peers.length; i++) {
-			console.log(peers[i].url);
 			axios
 				.post(`${peers[i].url}/peer-transaction`, {
 					transaction: transaction,
