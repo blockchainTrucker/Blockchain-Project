@@ -3,10 +3,11 @@ const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
 
 class Transaction {
-	constructor(fromAddress, toAddress, value, timestamp = Date.now()) {
+	constructor(fromAddress, toAddress, value, fee, timestamp = Date.now()) {
 		this.fromAddress = fromAddress;
 		this.toAddress = toAddress;
 		this.value = value;
+		this.fee = fee;
 		this.timestamp = timestamp;
 		this.hash = this.calculateHash().toString();
 	}
@@ -71,6 +72,7 @@ class Block {
 				tx.fromAddress,
 				tx.toAddress,
 				tx.value,
+				tx.fee,
 				tx.timestamp
 			);
 			trans.signature = tx.signature;
@@ -97,7 +99,8 @@ class Blockchain {
 		const faucetTx = new Transaction(
 			'',
 			'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713',
-			1000000000000000 * 10000
+			1000000000000000 * 10000,
+			0
 		);
 
 		let block = new Block(Date.now(), [faucetTx], '0', 0, null);
@@ -149,7 +152,8 @@ class Blockchain {
 		const tx = new Transaction(
 			data.fromAddress,
 			data.toAddress,
-			data.value
+			data.value,
+			this.fee
 		);
 		const signedTx = tx.signTransaction(data.privateKey);
 		if (signedTx[0] === true) {
@@ -205,7 +209,6 @@ class Blockchain {
 		);
 		let hash = block.calculateHash();
 		if (hash === data.hash) {
-			block.miner = data.miner;
 			block.hash = hash;
 			block.index = this.chain.length;
 			if (block.hasValidTransactions()) {
@@ -214,7 +217,8 @@ class Blockchain {
 				let minerTrans = new Transaction(
 					null,
 					data.miner,
-					this.miningReward
+					this.miningReward,
+					0
 				);
 				this.pendingTransactions.push(minerTrans);
 
@@ -224,7 +228,7 @@ class Blockchain {
 				return [true, minerTrans];
 			}
 		} else {
-			return false;
+			return [false];
 		}
 	}
 
@@ -259,7 +263,7 @@ class Blockchain {
 		for (const block of this.chain) {
 			for (const trans of block.transactions) {
 				if (trans.fromAddress === address) {
-					balance -= trans.value;
+					balance -= trans.value + trans.fee;
 				}
 				if (trans.toAddress === address) {
 					balance += trans.value;
@@ -274,7 +278,7 @@ class Blockchain {
 		for (const block of this.chain) {
 			for (const trans of block.transactions) {
 				if (trans.fromAddress === address) {
-					balance -= trans.value;
+					balance -= trans.value + trans.fee;
 				}
 				if (trans.toAddress === address) {
 					balance += trans.value;
@@ -291,7 +295,7 @@ class Blockchain {
 
 	faucet(faucetAddress, toAddress, privateKey) {
 		const value = 100000000;
-		const tx = new Transaction(faucetAddress, toAddress, value);
+		const tx = new Transaction(faucetAddress, toAddress, value, 0);
 		const signedTx = tx.signTransaction(privateKey);
 		this.addTransaction(signedTx[1]);
 		return signedTx[1];

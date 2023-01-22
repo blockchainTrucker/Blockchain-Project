@@ -7,13 +7,14 @@ const nodeID = `http://localhost:${PORT}`;
 const { Blockchain, Transaction } = require('./blockchain');
 const axios = require('axios');
 const validator = require('validator');
+const cors = require('cors');
 
 const faucetPrivateKey =
 	'1d9f52460c220ef032f0e510082c21b01c8059a503080afc5ffd1aad48efc6d8';
 const faucetPublicKey =
 	'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713';
 const coin = new Blockchain();
-
+let requestedNode = 'http://localhost:5555';
 let peers = [];
 let miners = [];
 
@@ -80,6 +81,7 @@ const isValidSecp256k1PublicKey = (key) => {
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(cors());
 
 app.get('/info', (req, res) => {
 	let info = coin.getInfo();
@@ -162,6 +164,7 @@ app.post('/peer-transaction', (req, res) => {
 			reqTx.fromAddress,
 			reqTx.toAddress,
 			parseInt(reqTx.value),
+			parseInt(coin.fee),
 			reqTx.timestamp
 		);
 		if (tx.hash === reqTx.hash) {
@@ -425,6 +428,19 @@ app.post('/connect-peer', (req, res) => {
 		}
 	} else {
 		res.send(JSON.stringify('invalid URL'));
+	}
+});
+
+app.get('/recent-blocks', (req, res) => {
+	let currentChain = coin.chain;
+	if (currentChain.length >= 10) {
+		let recentBlocks = [];
+		for (let i = currentChain.length - 10; i < currentChain.length; i++) {
+			recentBlocks.push(currentChain[i]);
+		}
+		res.send(JSON.stringify(recentBlocks));
+	} else {
+		res.send(JSON.stringify(coin.chain));
 	}
 });
 
