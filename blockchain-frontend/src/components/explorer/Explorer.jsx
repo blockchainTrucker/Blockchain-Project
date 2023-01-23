@@ -1,14 +1,24 @@
 import { Fragment, useEffect, useState } from 'react';
-import { Form, Row, Col, Table } from 'react-bootstrap';
+import { Form, Row, Col, Table, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const Main = () => {
 	const [recentBlocks, setRecentBlocks] = useState([]);
+	const [searchError, setSearchError] = useState();
+
 	const search = (event) => {
 		event.preventDefault();
 		const input = document.getElementById('chainSearch').value;
 		console.log(input);
+		if (/^[1-9A-HJ-NP-Za-km-z]{27,35}$/.test(input)) {
+			//address
+			console.log(true);
+		} else if (/^[0-9a-fA-F]{64}$/.test(input)) {
+			//tx or block
+			console.log(true);
+		} else {
+		}
 	};
 
 	const nodeCall = async () => {
@@ -31,12 +41,15 @@ const Main = () => {
 	return (
 		<Fragment>
 			<Row className='justify-content-center mt-5'>
+				<p>{searchError}</p>
+			</Row>
+			<Row className='justify-content-center'>
 				<Col lg={5}>
 					<Form onSubmit={search}>
 						<Form.Group>
 							<Form.Control
 								id='chainSearch'
-								className='text-center'
+								className='text-center card'
 								type='search'
 								placeholder=' Search Transaction/Block Hash or Wallet Address'
 							/>
@@ -44,44 +57,51 @@ const Main = () => {
 					</Form>
 				</Col>
 			</Row>
-			<Row className='justify-content-center mt-5'>
-				<h3 className='text-center'>Recent Blocks</h3>
-			</Row>
-			<Row>
-				<Col lg={12}>
-					<Table responsive className='text-center'>
-						<thead>
-							<tr>
-								<th>Index</th>
-								<th>Hash</th>
-								<th>Total Transactions</th>
-								<th>Block Value in MC</th>
-								<th>Time</th>
-							</tr>
-						</thead>
-						<tbody>
-							{recentBlocks.map((item, index) => {
-								return (
-									<tr key={index}>
-										<td>{item.index}</td>
-										<td>
-											<Link
-												to={`/explorer/hash/${item.hash}`}>
-												{item.hash}
-											</Link>
-										</td>
-										<td>{item.transactions.length}</td>
-										<td>{btt(item.transactions)}</td>
-										<td className='text-nowrap'>
-											{new Date(
-												item.timestamp
-											).toString()}
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</Table>
+			<Row className='justify-content-center my-5'>
+				<Col lg={10}>
+					<Card classname='card'>
+						<h3 className='text-center my-3'>Recent Blocks</h3>
+						<Table responsive className='text-center'>
+							<thead>
+								<tr>
+									<th>Index</th>
+									<th>Hash</th>
+									<th>Transactions</th>
+									<th>Value</th>
+									<th>Time</th>
+									<th>Miner</th>
+								</tr>
+							</thead>
+							<tbody>
+								{recentBlocks.map((item, index) => {
+									return (
+										<tr key={index}>
+											<td>{item.index}</td>
+											<td>
+												<Link
+													to={`/explorer/block/${item.hash}`}>
+													{item.hash}
+												</Link>
+											</td>
+											<td>{item.transactions.length}</td>
+											<td>{btt(item.transactions)}</td>
+											<td className='text-nowrap'>
+												{new Date(
+													item.timestamp
+												).toString()}
+											</td>
+											<td>
+												<Link
+													to={`/explorer/address/${item.miner}`}>
+													{item.miner}
+												</Link>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</Table>
+					</Card>
 				</Col>
 			</Row>
 		</Fragment>

@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const EC = require('elliptic').ec;
 const ec = new EC('secp256k1');
+const ripemd160 = require('ripemd160');
+const bs58 = require('bs58');
+const { parse } = require('path');
 
 class Transaction {
 	constructor(fromAddress, toAddress, value, fee, timestamp = Date.now()) {
@@ -24,22 +27,34 @@ class Transaction {
 		const key = ec.keyFromPrivate(privateKey, 'hex');
 		const sig = key.sign(this.hash, 'base64');
 		this.signature = sig.toDER('hex');
-		if (this.isValid()) {
-			return [true, this];
+		const publicKey = ec
+			.keyFromPrivate(privateKey)
+			.getPublic()
+			.encode('hex');
+		const hashedPublicKey = new ripemd160()
+			.update(Buffer.from(publicKey, 'hex'))
+			.digest();
+		const encodedHashedPublicKey = bs58.encode(
+			new Uint8Array(hashedPublicKey)
+		);
+		if (this.fromAddress === encodedHashedPublicKey) {
+			if (this.isValid(key)) {
+				return [true, this];
+			} else {
+				return [false];
+			}
 		} else {
 			return [false];
 		}
 	}
 
-	isValid() {
+	isValid(key) {
 		if (this.fromAddress === null) return true;
 
 		if (!this.signature || this.signature.length === 0) {
 			throw new Error('No signature in this transaction');
 		}
-
-		const publicKey = ec.keyFromPublic(this.fromAddress, 'hex');
-		return publicKey.verify(this.calculateHash(), this.signature);
+		return key.verify(this.calculateHash(), this.signature);
 	}
 }
 
@@ -64,24 +79,6 @@ class Block {
 					this.miner
 			)
 			.digest('hex');
-	}
-
-	hasValidTransactions() {
-		for (const tx of this.transactions) {
-			let trans = new Transaction(
-				tx.fromAddress,
-				tx.toAddress,
-				tx.value,
-				tx.fee,
-				tx.timestamp
-			);
-			trans.signature = tx.signature;
-			if (!trans.isValid()) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 }
 
@@ -186,14 +183,12 @@ class Blockchain {
 			block.miner = data.miner;
 			block.hash = hash;
 			block.index = this.chain.length;
-			if (block.hasValidTransactions()) {
-				this.chain.push(block);
-				if (block.miner === minerTrans.toAddress) {
-					this.pendingTransactions.push(minerTrans);
-				}
-				this.removeBlockTransactions(block.transactions);
-				return [true];
+			this.chain.push(block);
+			if (block.miner === minerTrans.toAddress) {
+				this.pendingTransactions.push(minerTrans);
 			}
+			this.removeBlockTransactions(block.transactions);
+			return [true];
 		} else {
 			return false;
 		}
@@ -211,22 +206,18 @@ class Blockchain {
 		if (hash === data.hash) {
 			block.hash = hash;
 			block.index = this.chain.length;
-			if (block.hasValidTransactions()) {
-				this.chain.push(block);
-				this.removeBlockTransactions(block.transactions);
-				let minerTrans = new Transaction(
-					null,
-					data.miner,
-					this.miningReward,
-					0
-				);
-				this.pendingTransactions.push(minerTrans);
+			this.chain.push(block);
+			this.removeBlockTransactions(block.transactions);
+			let minerTrans = new Transaction(
+				null,
+				data.miner,
+				this.miningReward,
+				0
+			);
+			this.pendingTransactions.push(minerTrans);
 
-				console.log(
-					`adding to pending transactions: ${minerTrans.hash}`
-				);
-				return [true, minerTrans];
-			}
+			console.log(`adding to pending transactions: ${minerTrans.hash}`);
+			return [true, minerTrans];
 		} else {
 			return [false];
 		}
@@ -263,10 +254,10 @@ class Blockchain {
 		for (const block of this.chain) {
 			for (const trans of block.transactions) {
 				if (trans.fromAddress === address) {
-					balance -= trans.value + trans.fee;
+					balance -= parseInt(trans.value) + parseInt(trans.fee);
 				}
 				if (trans.toAddress === address) {
-					balance += trans.value;
+					balance += parseInt(trans.value);
 				}
 			}
 		}

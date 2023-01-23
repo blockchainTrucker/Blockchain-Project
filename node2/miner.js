@@ -7,8 +7,7 @@ const PORT = 5000;
 const validator = require('validator');
 const minerURL = `http://localhost:${PORT}`;
 let minerID = '';
-const publicKey =
-	'041ff5b39b7a9f4c0e7e09091495cb09831495a7602a745361465fb2f8c124558eb4efb2c8ebb5736c39d13d426dd4577c0ac55c67abadf36345617e5d833b822b';
+const address = '2MW8V7hjQWTmTC2HrN7NxqJipX3k';
 let chainData = {};
 let transList = [];
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -26,7 +25,7 @@ const calculateHash = (nonce) => {
 				chainData.timestamp +
 				JSON.stringify(chainData.pendingTransactions) +
 				nonce +
-				publicKey
+				address
 		)
 		.digest('hex');
 };
@@ -51,7 +50,7 @@ const mineBlock = async () => {
 			difficulty: chainData.difficulty,
 			timestamp: chainData.timestamp,
 			previousHash: chainData.previousBlockHash,
-			miner: publicKey,
+			miner: address,
 			url: minerURL,
 			id: minerID,
 		})
