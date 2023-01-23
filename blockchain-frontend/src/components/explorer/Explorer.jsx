@@ -7,6 +7,7 @@ const Main = () => {
 	const [recentBlocks, setRecentBlocks] = useState([]);
 	const [searchError, setSearchError] = useState();
 	const navigate = useNavigate();
+
 	const search = async (event) => {
 		event.preventDefault();
 		const input = document.getElementById('chainSearch').value;
@@ -78,16 +79,6 @@ const Main = () => {
 					<Card className='card'>
 						<h3 className='text-center my-3'>Recent Blocks</h3>
 						<Table responsive className='text-center mb-3'>
-							<thead>
-								<tr>
-									<th>Index</th>
-									<th>Hash</th>
-									<th>Transactions</th>
-									<th>Value</th>
-									<th>Miner</th>
-									<th>Time</th>
-								</tr>
-							</thead>
 							<tbody>
 								{recentBlocks.map((item, index) => {
 									return (
