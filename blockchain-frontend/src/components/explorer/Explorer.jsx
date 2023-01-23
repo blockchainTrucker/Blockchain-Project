@@ -1,23 +1,34 @@
 import { Fragment, useEffect, useState } from 'react';
-import { Form, Row, Col, Table, Card } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Form, Row, Col, Table, Card, Button } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Main = () => {
 	const [recentBlocks, setRecentBlocks] = useState([]);
 	const [searchError, setSearchError] = useState();
-
-	const search = (event) => {
+	const navigate = useNavigate();
+	const search = async (event) => {
 		event.preventDefault();
 		const input = document.getElementById('chainSearch').value;
-		console.log(input);
-		if (/^[1-9A-HJ-NP-Za-km-z]{27,35}$/.test(input)) {
-			//address
-			console.log(true);
+		if (/^[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(input)) {
+			navigate(`/explorer/address/${input}`);
 		} else if (/^[0-9a-fA-F]{64}$/.test(input)) {
-			//tx or block
-			console.log(true);
+			let res = await axios.post('http://localhost:5555/hash-search', {
+				hash: input,
+			});
+			if (res.data[0] === true) {
+				if (res.data[1] === 'block') {
+					navigate(`/explorer/block/${input}`);
+				} else if (res.data[1] === 'tx') {
+					navigate(`/explorer/tx/${input}`);
+				}
+			} else {
+				setSearchError('The entered hash was not found');
+			}
 		} else {
+			setSearchError(
+				'Please enter a valid SHA-256 hash or wallet address'
+			);
 		}
 	};
 
@@ -38,13 +49,18 @@ const Main = () => {
 		return total;
 	};
 
+	const fullChain = async () => {
+		let res = await axios.get('http://localhost:5555/chain');
+		setRecentBlocks(res.data.reverse());
+	};
+
 	return (
 		<Fragment>
-			<Row className='justify-content-center mt-5'>
+			<Row className='text-center text-danger mt-5'>
 				<p>{searchError}</p>
 			</Row>
 			<Row className='justify-content-center'>
-				<Col lg={5}>
+				<Col lg={6}>
 					<Form onSubmit={search}>
 						<Form.Group>
 							<Form.Control
@@ -59,17 +75,17 @@ const Main = () => {
 			</Row>
 			<Row className='justify-content-center my-5'>
 				<Col lg={10}>
-					<Card classname='card'>
+					<Card className='card'>
 						<h3 className='text-center my-3'>Recent Blocks</h3>
-						<Table responsive className='text-center'>
+						<Table responsive className='text-center mb-3'>
 							<thead>
 								<tr>
 									<th>Index</th>
 									<th>Hash</th>
 									<th>Transactions</th>
 									<th>Value</th>
-									<th>Time</th>
 									<th>Miner</th>
+									<th>Time</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -85,22 +101,32 @@ const Main = () => {
 											</td>
 											<td>{item.transactions.length}</td>
 											<td>{btt(item.transactions)}</td>
-											<td className='text-nowrap'>
-												{new Date(
-													item.timestamp
-												).toString()}
-											</td>
 											<td>
 												<Link
 													to={`/explorer/address/${item.miner}`}>
 													{item.miner}
 												</Link>
 											</td>
+											<td className='text-nowrap'>
+												{new Date(
+													item.timestamp
+												).toString()}
+											</td>
 										</tr>
 									);
 								})}
 							</tbody>
 						</Table>
+						<Row className='justify-content-center'>
+							<Col md={3}>
+								<Button
+									onClick={fullChain}
+									type='button'
+									className='btn btn-success my-3 mx-auto d-grid gap-2'>
+									Show Full Chain
+								</Button>
+							</Col>
+						</Row>
 					</Card>
 				</Col>
 			</Row>

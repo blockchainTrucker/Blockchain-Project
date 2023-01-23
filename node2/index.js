@@ -216,11 +216,7 @@ app.post('/faucet', (req, res) => {
 							Date.now() - transaction.timestamp <
 							1000 * 60 * 60
 						) {
-							res.send(
-								JSON.stringify(
-									'you can only make 1 request per hour'
-								)
-							);
+							res.send(JSON.stringify([false, 'time limit']));
 							return;
 						}
 					}
@@ -241,9 +237,9 @@ app.post('/faucet', (req, res) => {
 					peers.splice(peers[(i, 1)]);
 				});
 		}
-		res.send(JSON.stringify(`sent 1 coin to ${address}`));
+		res.send(JSON.stringify([true, `success`]));
 	} else {
-		res.send(JSON.stringify(`invalid address`));
+		res.send(JSON.stringify([false, `invalid address`]));
 	}
 });
 
@@ -424,6 +420,24 @@ app.get('/recent-blocks', (req, res) => {
 	} else {
 		res.send(JSON.stringify(coin.chain));
 	}
+});
+
+app.post('/hash-search', (req, res) => {
+	const hash = req.body.hash;
+	console.log(hash);
+	for (const block of coin.chain) {
+		if (block.hash == hash) {
+			res.send(JSON.stringify([true, 'block', block]));
+			return;
+		}
+		for (let i = 0; i < block.transactions.length; i++) {
+			if (block.transactions[i].hash == hash) {
+				res.send(JSON.stringify([true, 'tx', block.transactions[i]]));
+				return;
+			}
+		}
+	}
+	res.send(JSON.stringify([false]));
 });
 
 app.listen(PORT, () => {
