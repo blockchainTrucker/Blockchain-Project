@@ -15,8 +15,8 @@ const Block = () => {
 		});
 		if (res.data[0] === true) {
 			setBlock(res.data[2]);
-			value();
-			fee();
+			value(res.data[2].transactions);
+			fee(res.data[2].transactions);
 		}
 	};
 
@@ -24,19 +24,19 @@ const Block = () => {
 		nodeCall();
 	}, []);
 
-	const value = () => {
+	const value = (transactions) => {
 		let total = 0;
-		for (const transaction of block.transactions) {
-			total += parseInt(transaction.value);
+		for (let i = 0; i < transactions.length; i++) {
+			total = total + parseInt(transactions[i].value);
 		}
 		total = (total / 10 ** 8).toFixed(8);
 		setBlockValue(total);
 	};
 
-	const fee = () => {
+	const fee = (transactions) => {
 		let total = 0;
-		for (const transaction of block.transactions) {
-			total += parseInt(transaction.fee);
+		for (let i = 0; i < transactions.length; i++) {
+			total += parseInt(transactions[i].fee);
 		}
 		total = (total / 10 ** 8).toFixed(8);
 		setBlockFee(total);
@@ -51,39 +51,43 @@ const Block = () => {
 							Block Information
 						</Card.Header>
 						<Card.Body>
-							<Table className='mx-2'>
-								<tr className='mt-3'>
-									<td>Hash:</td>
-									<td>{block.hash}</td>
-								</tr>
-								<tr>
-									<td>Time:</td>
-									<td>
-										{new Date(block.timestamp).toString()}
-									</td>
-								</tr>
-								<tr>
-									<td>Value:</td>
-									<td>{blockValue}</td>
-								</tr>
-								<tr>
-									<td>Fees:</td>
-									<td>{blockFee}</td>
-								</tr>
-								<tr>
-									<td>Miner:</td>
-									<td>
-										<Link
-											className='p-0'
-											to={`/explorer/address/${block.miner}`}>
-											{block.miner}
-										</Link>
-									</td>
-								</tr>
-								<tr>
-									<td>Index:</td>
-									<td>{block.index}</td>
-								</tr>
+							<Table>
+								<tbody>
+									<tr className='mt-3'>
+										<td>Hash:</td>
+										<td>{block.hash}</td>
+									</tr>
+									<tr>
+										<td>Time:</td>
+										<td>
+											{new Date(
+												block.timestamp
+											).toString()}
+										</td>
+									</tr>
+									<tr>
+										<td>Value:</td>
+										<td>{blockValue}</td>
+									</tr>
+									<tr>
+										<td>Fees:</td>
+										<td>{blockFee}</td>
+									</tr>
+									<tr>
+										<td>Miner:</td>
+										<td>
+											<Link
+												className='p-0'
+												to={`/explorer/address/${block.miner}`}>
+												{block.miner}
+											</Link>
+										</td>
+									</tr>
+									<tr>
+										<td>Index:</td>
+										<td>{block.index}</td>
+									</tr>
+								</tbody>
 							</Table>
 						</Card.Body>
 					</Card>
@@ -94,18 +98,20 @@ const Block = () => {
 					<Card className='text-center'>
 						<Card.Header className='fs-5'>Transactions</Card.Header>
 						<Table className='mt-3'>
-							{block.transactions.map((item, index) => {
-								return (
-									<tr key={index}>
-										<td>
-											<Link
-												to={`/explorer/address/${item.hash}`}>
-												{item.hash}
-											</Link>
-										</td>
-									</tr>
-								);
-							})}
+							<tbody>
+								{block.transactions.map((item, index) => {
+									return (
+										<tr key={index}>
+											<td>
+												<Link
+													to={`/explorer/tx/${item.hash}`}>
+													{item.hash}
+												</Link>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
 						</Table>
 					</Card>
 				</Col>

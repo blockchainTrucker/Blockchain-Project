@@ -440,6 +440,15 @@ app.post('/hash-search', (req, res) => {
 	res.send(JSON.stringify([false]));
 });
 
+app.post('/wallet-activity', (req, res) => {
+	const address = req.body.address;
+	console.log(address);
+
+	const activity = coin.getAllTransactionsForWallet(address);
+	console.log(activity);
+	res.send(JSON.stringify(activity));
+});
+
 app.listen(PORT, () => {
 	console.log(`Node running at: ${nodeID}`);
 });

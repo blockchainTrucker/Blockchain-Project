@@ -95,7 +95,7 @@ class Blockchain {
 	createGenesisBlock() {
 		const faucetTx = new Transaction(
 			'',
-			'04439e9fc23cf27a2a03d44832e8d91a695224e6c780f959da09331368ed777e6dcfccb271de346239e83082064c44507fe5f40158dc077be8f5ed9573fe393713',
+			'FPYjDRvWT21XbvYxtzNC3YMVgTY',
 			1000000000000000 * 10000,
 			0
 		);
