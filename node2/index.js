@@ -473,7 +473,12 @@ app.get('/recent-blocks', (req, res) => {
 
 app.post('/hash-search', (req, res) => {
 	const hash = req.body.hash;
-	console.log(hash);
+	for (const transaction of coin.pendingTransactions) {
+		if (hash == transaction.hash) {
+			res.send(JSON.stringify([true, 'tx', transaction, 'Pending']));
+			return;
+		}
+	}
 	for (const block of coin.chain) {
 		if (block.hash == hash) {
 			res.send(JSON.stringify([true, 'block', block]));
@@ -481,7 +486,14 @@ app.post('/hash-search', (req, res) => {
 		}
 		for (let i = 0; i < block.transactions.length; i++) {
 			if (block.transactions[i].hash == hash) {
-				res.send(JSON.stringify([true, 'tx', block.transactions[i]]));
+				res.send(
+					JSON.stringify([
+						true,
+						'tx',
+						block.transactions[i],
+						'Confirmed',
+					])
+				);
 				return;
 			}
 		}

@@ -6,6 +6,7 @@ import axios from 'axios';
 const Tx = () => {
 	const { hash } = useParams();
 	const [transaction, setTransaction] = useState({});
+	const [status, setStatus] = useState();
 
 	const nodeCall = async () => {
 		let res = await axios.post('http://localhost:5555/hash-search', {
@@ -13,6 +14,7 @@ const Tx = () => {
 		});
 		if (res.data[0] === true) {
 			setTransaction(res.data[2]);
+			setStatus(res.data[3]);
 		}
 	};
 
@@ -80,6 +82,10 @@ const Tx = () => {
 												10 ** 8
 											).toFixed(8)}
 										</td>
+									</tr>
+									<tr>
+										<td>Status:</td>
+										<td>{status}</td>
 									</tr>
 								</tbody>
 							</Table>

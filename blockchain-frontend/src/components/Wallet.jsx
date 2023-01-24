@@ -236,12 +236,6 @@ const Wallet = () => {
 									</Link>
 								</p>
 							</div>
-							{/* <div className=' mt-3 text-center'>
-								<p className='m-0 fw-bold'>
-									{recoverAddress[0]}
-								</p>
-								<p>{recoverAddress[1]}</p>
-							</div> */}
 						</Card.Body>
 					</Card>
 				</Col>
