@@ -12,6 +12,7 @@ const elliptic = require('elliptic');
 const ec = new elliptic.ec('secp256k1');
 const ripemd160 = require('ripemd160');
 const bs58 = require('bs58');
+const hdkey = require('hdkey');
 
 const faucetPrivateKey =
 	'886e673b75ef92cd252d7103a0a165940f1bc9f35923e1eb78ebaca54a7f1769';
@@ -49,6 +50,39 @@ const connectNode = () => {
 };
 
 connectNode();
+
+const newWallet = () => {
+	const mnemonic = bip39.generateMnemonic();
+	const seed = bip39.mnemonicToSeedSync(mnemonic);
+	const hdwallet = hdkey.fromMasterSeed(seed);
+	const child1 = hdwallet.derive("m/44'/0'/0'/0/0");
+	const privateKey = child1.privateKey;
+	const publicKey = ec.keyFromPrivate(privateKey).getPublic().encode('hex');
+	const hashedPublicKey = new ripemd160()
+		.update(Buffer.from(publicKey, 'hex'))
+		.digest();
+	const encodedHashedPublicKey = bs58.encode(new Uint8Array(hashedPublicKey));
+	const decoded = bs58.decode(encodedHashedPublicKey);
+	const buffer = Buffer.from(decoded);
+	const address = buffer.toString('hex');
+	return [mnemonic, privateKey.toString('hex'), address];
+};
+
+const recoverFromMnemonic = (mnemonic) => {
+	const seed = bip39.mnemonicToSeedSync(mnemonic);
+	const hdwallet = hdkey.fromMasterSeed(seed);
+	const child1 = hdwallet.derive("m/44'/0'/0'/0/0");
+	const privateKey = child1.privateKey;
+	const publicKey = ec.keyFromPrivate(privateKey).getPublic().encode('hex');
+	const hashedPublicKey = new ripemd160()
+		.update(Buffer.from(publicKey, 'hex'))
+		.digest();
+	const encodedHashedPublicKey = bs58.encode(new Uint8Array(hashedPublicKey));
+	const decoded = bs58.decode(encodedHashedPublicKey);
+	const buffer = Buffer.from(decoded);
+	const address = buffer.toString('hex');
+	return [privateKey.toString('hex'), address];
+};
 
 const calculateHash = (url) => {
 	return crypto
@@ -95,6 +129,17 @@ app.get('/info', (req, res) => {
 	res.send(JSON.stringify(info));
 });
 
+app.get('/create-wallet', (req, res) => {
+	const wallet = newWallet();
+	res.send(JSON.stringify(wallet));
+});
+
+app.post('/recover-wallet', (req, res) => {
+	const mnemonic = req.body.mnemonic;
+	const wallet = recoverFromMnemonic(mnemonic);
+	res.send(JSON.stringify(wallet));
+});
+
 app.get('/debug', (req, res) => {
 	let info = coin.debug();
 	info.miners = miners;
@@ -120,7 +165,6 @@ app.post('/add-transaction', (req, res) => {
 	const transaction = req.body;
 	if (isValidPrivateKey(transaction.privateKey)) {
 		let addressFromPrivate = getAddress(transaction.privateKey);
-		console.log(transaction.fromAddress);
 		if (addressFromPrivate === transaction.fromAddress) {
 			if (transaction.value > 0) {
 				let balance = coin.getBalanceOfAddress(transaction.fromAddress);
@@ -142,21 +186,26 @@ app.post('/add-transaction', (req, res) => {
 									);
 								});
 						}
-						res.send(JSON.stringify(tx.hash));
+						res.send(JSON.stringify([true, tx.hash]));
 					} else {
-						res.send(JSON.stringify('invalid transaction'));
+						res.send(JSON.stringify([false, 'invalid address']));
 					}
 				} else {
-					res.send(JSON.stringify('insufficient balance'));
+					res.send(JSON.stringify([false, 'insufficient balance']));
 				}
 			} else {
-				res.send(JSON.stringify('transaction must be greater than 0'));
+				res.send(
+					JSON.stringify([
+						false,
+						'transaction must be greater than 0',
+					])
+				);
 			}
 		} else {
-			res.send(JSON.stringify('invalid transaction 2'));
+			res.send(JSON.stringify('invalid private key'));
 		}
 	} else {
-		res.send(JSON.stringify('invalid transaction'));
+		res.send(JSON.stringify('invalid private key'));
 	}
 });
 
@@ -442,10 +491,7 @@ app.post('/hash-search', (req, res) => {
 
 app.post('/wallet-activity', (req, res) => {
 	const address = req.body.address;
-	console.log(address);
-
 	const activity = coin.getAllTransactionsForWallet(address);
-	console.log(activity);
 	res.send(JSON.stringify(activity));
 });
 

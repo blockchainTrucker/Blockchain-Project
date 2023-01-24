@@ -17,7 +17,7 @@ const Wallet = () => {
 			'http://localhost:5555/wallet-activity',
 			{ address: address }
 		);
-		setActivity(walletActivity.data);
+		setActivity(walletActivity.data.reverse());
 	};
 
 	useEffect(() => {
@@ -76,10 +76,21 @@ const Wallet = () => {
 														{item.hash}
 													</Link>
 												</td>
-												<td>{item.toAddress}</td>
 												<td className='text-nowrap'>
-													{item.fromAddress ||
-														'Miner Reward'}
+													{
+														<Link
+															to={`/explorer/address/${item.toAddress}`}>
+															{item.toAddress}
+														</Link>
+													}
+												</td>{' '}
+												<td className='text-nowrap'>
+													{
+														<Link
+															to={`/explorer/address/${item.fromAddress}`}>
+															{item.fromAddress}
+														</Link>
+													}
 												</td>
 												<td>
 													{(

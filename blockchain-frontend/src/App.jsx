@@ -12,6 +12,7 @@ import ExplorerBlock from './components/explorer/Block.jsx';
 import ExplorerTx from './components/explorer/Tx.jsx';
 import ExplorerWallet from './components/explorer/Wallet.jsx';
 import Faucet from './components/Faucet.jsx';
+import Wallet from './components/Wallet.jsx';
 
 function App() {
 	return (
@@ -36,6 +37,7 @@ function App() {
 					element={<ExplorerWallet />}
 				/>
 				<Route exact path='/faucet' element={<Faucet />} />
+				<Route exact path='/wallet' element={<Wallet />} />
 			</Routes>
 		</Router>
 	);

@@ -76,7 +76,9 @@ const Main = () => {
 			<Row className='justify-content-center my-5'>
 				<Col lg={10}>
 					<Card className='card'>
-						<h3 className='text-center my-3'>Recent Blocks</h3>
+						<Card.Header className='fs-5 text-center'>
+							Recent Blocks
+						</Card.Header>
 						<Table responsive className='text-center mb-3'>
 							<thead>
 								<tr>
@@ -100,7 +102,12 @@ const Main = () => {
 												</Link>
 											</td>
 											<td>{item.transactions.length}</td>
-											<td>{btt(item.transactions)}</td>
+											<td>
+												{(
+													btt(item.transactions) /
+													10 ** 8
+												).toFixed(8)}
+											</td>
 											<td>
 												<Link
 													to={`/explorer/address/${item.miner}`}>

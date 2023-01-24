@@ -4,9 +4,11 @@ const ripemd160 = require('ripemd160');
 const bs58 = require('bs58');
 const crypto = require('crypto');
 const hdkey = require('hdkey');
+const bip39 = require('bip39');
 
 // Generate a new master private key
-const seed = crypto.randomBytes(32);
+const mnemonic = bip39.generateMnemonic();
+const seed = bip39.mnemonicToSeedSync(mnemonic);
 const hdwallet = hdkey.fromMasterSeed(seed);
 
 // Derive the first BIP32 child
