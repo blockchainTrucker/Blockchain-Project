@@ -30,23 +30,19 @@ const Wallet = () => {
 	const recoverWallet = async (event) => {
 		event.preventDefault();
 		const input = document.getElementById('input').value;
-		if (/^[a-z ]{4,}( [a-z ]{4,}){11}$/.test(input)) {
-			await axios
-				.post('http://localhost:5555/recover-wallet', {
-					mnemonic: input,
-				})
-				.then((wallet) => {
-					// document.getElementById('button').disabled = true;
-					setRecoverKey(['Private Key', wallet.data[0]]);
-					setRecoverAddress(['Address', wallet.data[1]]);
-				})
-				.catch((err) => {
-					console.log(err);
-				});
-		} else {
-			setRecoverKey([]);
-			setRecoverAddress([]);
-		}
+
+		await axios
+			.post('http://localhost:5555/recover-wallet', {
+				mnemonic: input,
+			})
+			.then((wallet) => {
+				// document.getElementById('button').disabled = true;
+				setRecoverKey(['Private Key', wallet.data[0]]);
+				setRecoverAddress(['Address', wallet.data[1]]);
+			})
+			.catch((err) => {
+				console.log(err);
+			});
 	};
 
 	const sendCoins = async (event) => {
@@ -87,7 +83,7 @@ const Wallet = () => {
 	return (
 		<Fragment>
 			<Row className='justify-content-center mt-5'>
-				<Col lg={5} className='mx-3'>
+				<Col lg={6} className='mx-3'>
 					<Card>
 						<Card.Header className='fs-5 text-center'>
 							Create New Wallet
@@ -138,7 +134,7 @@ const Wallet = () => {
 									</p>
 									<Form.Control
 										id='input'
-										className='card mb-3'
+										className='card mb-3 text-center'
 										type='search'></Form.Control>
 								</Form.Group>
 								<Button

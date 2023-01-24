@@ -50,7 +50,7 @@ const connectNode = () => {
 		});
 };
 
-connectNode();
+// connectNode();
 
 const newWallet = () => {
 	const mnemonic = bip39.generateMnemonic();
@@ -62,10 +62,7 @@ const newWallet = () => {
 	const hashedPublicKey = new ripemd160()
 		.update(Buffer.from(publicKey, 'hex'))
 		.digest();
-	const encodedHashedPublicKey = bs58.encode(new Uint8Array(hashedPublicKey));
-	const decoded = bs58.decode(encodedHashedPublicKey);
-	const buffer = Buffer.from(decoded);
-	const address = buffer.toString('hex');
+	const address = bs58.encode(new Uint8Array(hashedPublicKey));
 	return [mnemonic, privateKey.toString('hex'), address];
 };
 
@@ -78,10 +75,7 @@ const recoverFromMnemonic = (mnemonic) => {
 	const hashedPublicKey = new ripemd160()
 		.update(Buffer.from(publicKey, 'hex'))
 		.digest();
-	const encodedHashedPublicKey = bs58.encode(new Uint8Array(hashedPublicKey));
-	const decoded = bs58.decode(encodedHashedPublicKey);
-	const buffer = Buffer.from(decoded);
-	const address = buffer.toString('hex');
+	const address = bs58.encode(new Uint8Array(hashedPublicKey));
 	return [privateKey.toString('hex'), address];
 };
 
