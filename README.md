@@ -14,3 +14,5 @@ The home page is the block explorer. It gives you the ability to search the bloc
 The faucet allows a wallet address to receive 1 coin per hour.
 
 The Wallet allows you to create a new wallet, recover your wallet from mnemonic, and send coins.
+
+The wallets for this blockchain are HD wallets and are created from a bIP39 mnemonic. The private key is derived from path m/44'/0'/0'/0/0. The address is the base58 encoded ripemd160 hash of the public key. 
