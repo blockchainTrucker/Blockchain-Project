@@ -100,13 +100,13 @@ const isValidPrivateKey = (privateKey) => {
 	return true;
 };
 
-function isValidAddress(address) {
+const isValidAddress = (address) => {
 	if (!/^[1-9A-HJ-NP-Za-km-z]{27,35}$/.test(address)) {
 		console.log(false);
 		return false;
 	}
 	return true;
-}
+};
 
 const getAddress = (privateKey) => {
 	const publicKey = ec.keyFromPrivate(privateKey).getPublic().encode('hex');
