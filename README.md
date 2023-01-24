@@ -13,4 +13,4 @@ The home page is the block explorer. It gives you the ability to search the bloc
 
 The faucet allows a wallet address to receive 1 coin per hour.
 
-Thw Wallet allows you to create a new wallet, recover your wallet from mnemonic, and send coins.
+The Wallet allows you to create a new wallet, recover your wallet from mnemonic, and send coins.
